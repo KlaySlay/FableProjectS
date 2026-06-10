@@ -50,7 +50,7 @@ export function RoutineReviewCard({ onCreditUsed }: { onCreditUsed: () => void }
       if (data.error === 'limit_reached') {
         setState({ kind: 'error', message: "You've used all 3 AI credits today. Come back tomorrow." })
       } else if (data.error) {
-        setState({ kind: 'error', message: "Couldn't connect. Try again later." })
+        setState({ kind: 'error', message: `Error: ${data.error}` })
       } else {
         setState({ kind: 'result', review: data })
         if (user) awardXP(user.id, 'routine_review').catch(() => {})
