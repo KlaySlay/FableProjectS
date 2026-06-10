@@ -95,7 +95,8 @@ export async function POST(request: Request) {
     })
 
     return NextResponse.json(result)
-  } catch {
+  } catch (e) {
+    console.error('Anthropic error:', e)
     return NextResponse.json({ error: 'ai_failed' }, { status: 502 })
   }
 }

@@ -1,7 +1,7 @@
 import 'server-only'
 import Anthropic from '@anthropic-ai/sdk'
 
-export const AI_MODEL = 'claude-sonnet-4-20250514'
+export const AI_MODEL = 'claude-haiku-4-5-20251001'
 
 let client: Anthropic | null = null
 
