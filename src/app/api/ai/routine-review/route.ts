@@ -12,10 +12,12 @@ The verdict must be under 20 words. The nudge must be under 15 words and motivat
 const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
 export async function POST(request: Request) {
+  console.log('routine-review: start, ANTHROPIC_API_KEY set?', !!process.env.ANTHROPIC_API_KEY)
   const supabase = getServerSupabase()
   const {
     data: { user },
   } = await supabase.auth.getUser()
+  console.log('routine-review: user', user?.email ?? 'none')
   if (!user) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
 
   if (!isAIAllowed(user.email)) {
