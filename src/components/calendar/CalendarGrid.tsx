@@ -12,12 +12,16 @@ export function CalendarGrid({
   photosByDate,
   categories,
   userColors,
+  members,
+  viewMode,
 }: {
   year: number
   month: number
   photosByDate: Record<string, CalendarPhoto[]>
   categories: Category[]
   userColors: Record<string, string>
+  members: { id: string; avatarColor: string }[]
+  viewMode: 'mosaic' | 'infinity'
 }) {
   const { daysInMonth, startWeekday, rows } = monthGrid(year, month)
   const todayKey = dateKey(new Date())
@@ -52,7 +56,9 @@ export function CalendarGrid({
               photos={photosByDate[key] ?? []}
               categories={categories}
               userColors={userColors}
+              members={members}
               isToday={key === todayKey}
+              viewMode={viewMode}
             />
           )
         })}

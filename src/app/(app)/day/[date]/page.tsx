@@ -22,6 +22,37 @@ export default function DayPage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [exporting, setExporting] = useState(false)
+
+  async function handleExport() {
+    if (exporting || photos.length === 0) return
+    setExporting(true)
+    try {
+      const files = await Promise.all(
+        photos.map(async (p) => {
+          const res = await fetch(p.src)
+          const blob = await res.blob()
+          return new File([blob], `project-s-${date}-${p.id}.jpg`, { type: 'image/jpeg' })
+        }),
+      )
+      if (navigator.canShare?.({ files })) {
+        await navigator.share({ files, title: `Project S – ${date}` })
+      } else {
+        files.forEach((file) => {
+          const url = URL.createObjectURL(file)
+          const a = document.createElement('a')
+          a.href = url
+          a.download = file.name
+          a.click()
+          URL.revokeObjectURL(url)
+        })
+      }
+    } catch {
+      // user cancelled share or browser blocked — silent
+    } finally {
+      setExporting(false)
+    }
+  }
 
   const categories = community?.categories ?? []
   const members = community?.members ?? []
@@ -82,19 +113,35 @@ export default function DayPage() {
         </button>
         <h1 className="text-base font-semibold text-ink">{formatDayHeading(date)}</h1>
         {photos.length > 0 ? (
-          <button
-            aria-label={deleteMode ? 'Cancel delete' : 'Delete photos'}
-            onClick={() => (deleteMode ? exitDeleteMode() : setDeleteMode(true))}
-            className="px-2 py-1 text-ink-muted"
-          >
-            {deleteMode ? (
-              <span className="text-sm font-medium">Cancel</span>
-            ) : (
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M3 6h18" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" /><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-              </svg>
+          <div className="flex items-center gap-1">
+            {!deleteMode && (
+              <button
+                aria-label="Export photos"
+                onClick={handleExport}
+                disabled={exporting}
+                className="px-2 py-1 text-ink-muted disabled:opacity-40"
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                  <polyline points="7 10 12 15 17 10" />
+                  <line x1="12" y1="15" x2="12" y2="3" />
+                </svg>
+              </button>
             )}
-          </button>
+            <button
+              aria-label={deleteMode ? 'Cancel delete' : 'Delete photos'}
+              onClick={() => (deleteMode ? exitDeleteMode() : setDeleteMode(true))}
+              className="px-2 py-1 text-ink-muted"
+            >
+              {deleteMode ? (
+                <span className="text-sm font-medium">Cancel</span>
+              ) : (
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M3 6h18" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" /><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                </svg>
+              )}
+            </button>
+          </div>
         ) : (
           <div className="w-9" />
         )}

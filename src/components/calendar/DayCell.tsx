@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { PhotoMosaic } from './PhotoMosaic'
 import { CategoryRing } from './CategoryRing'
+import { InfinityProgress } from './InfinityProgress'
 import type { CalendarPhoto, Category } from '@/types'
 
 export function DayCell({
@@ -11,15 +12,39 @@ export function DayCell({
   photos,
   categories,
   userColors,
+  members,
   isToday,
+  viewMode,
 }: {
   date: string
   dayNumber: number
   photos: CalendarPhoto[]
   categories: Category[]
   userColors: Record<string, string>
+  members: { id: string; avatarColor: string }[]
   isToday: boolean
+  viewMode: 'mosaic' | 'infinity'
 }) {
+  if (viewMode === 'infinity') {
+    return (
+      <Link
+        href={`/day/${date}`}
+        className="relative block h-full w-full p-[3px]"
+        aria-label={`Day ${dayNumber}`}
+      >
+        <div className="relative h-full w-full overflow-hidden rounded-xl bg-surface">
+          <InfinityProgress
+            photos={photos}
+            categories={categories}
+            members={members}
+            dayNumber={dayNumber}
+            isToday={isToday}
+          />
+        </div>
+      </Link>
+    )
+  }
+
   return (
     <Link
       href={`/day/${date}`}

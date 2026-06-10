@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, useCallback } from 'react'
 import Link from 'next/link'
 import { CalendarGrid } from '@/components/calendar/CalendarGrid'
 import { AddPhotoModal } from '@/components/upload/AddPhotoModal'
@@ -27,6 +27,18 @@ export default function CalendarPage() {
   const [nudgeVisible, setNudgeVisible] = useState(false)
   const [nudgeDismissed, setNudgeDismissed] = useState(false)
   const [mcqPhotoId, setMcqPhotoId] = useState<string | null>(null)
+  const [viewMode, setViewMode] = useState<'mosaic' | 'infinity'>(() => {
+    if (typeof window === 'undefined') return 'mosaic'
+    return (localStorage.getItem('ps_cal_view') as 'mosaic' | 'infinity') ?? 'mosaic'
+  })
+
+  const toggleView = useCallback(() => {
+    setViewMode((prev) => {
+      const next = prev === 'mosaic' ? 'infinity' : 'mosaic'
+      localStorage.setItem('ps_cal_view', next)
+      return next
+    })
+  }, [])
 
   const { photosByDate, refresh } = usePhotosForMonth(year, month)
 
@@ -68,6 +80,7 @@ export default function CalendarPage() {
   }
 
   const members = community?.members ?? []
+  const memberShapes = members.map((m) => ({ id: m.id, avatarColor: m.avatarColor }))
   const solo = members.length <= 1
 
   return (
@@ -86,13 +99,35 @@ export default function CalendarPage() {
             ›
           </button>
         </div>
-        {streak > 0 ? (
-          <Link href="/profile" className="rounded-full bg-surface px-2.5 py-1.5 text-xs font-semibold text-ink">
-            🔥 {streak}
-          </Link>
-        ) : (
-          <div className="w-12" />
-        )}
+        <div className="flex items-center gap-2">
+          <button
+            onClick={toggleView}
+            aria-label={viewMode === 'mosaic' ? 'Switch to infinity view' : 'Switch to photo view'}
+            className="flex h-7 w-7 items-center justify-center rounded-full bg-surface text-ink-muted transition-colors"
+            style={viewMode === 'infinity' ? { color: 'var(--accent)' } : {}}
+          >
+            {viewMode === 'mosaic' ? (
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+                <path d="M12 12c-2-2.5-4-4-6-4a4 4 0 0 0 0 8c2 0 4-1.5 6-4z" />
+                <path d="M12 12c2 2.5 4 4 6 4a4 4 0 0 0 0-8c-2 0-4 1.5-6 4z" />
+              </svg>
+            ) : (
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+                <rect x="3" y="3" width="7" height="7" rx="1" />
+                <rect x="14" y="3" width="7" height="7" rx="1" />
+                <rect x="3" y="14" width="7" height="7" rx="1" />
+                <rect x="14" y="14" width="7" height="7" rx="1" />
+              </svg>
+            )}
+          </button>
+          {streak > 0 ? (
+            <Link href="/profile" className="rounded-full bg-surface px-2.5 py-1.5 text-xs font-semibold text-ink">
+              🔥 {streak}
+            </Link>
+          ) : (
+            <div className="w-12" />
+          )}
+        </div>
       </header>
 
       {/* View filter */}
@@ -121,6 +156,8 @@ export default function CalendarPage() {
           photosByDate={filtered}
           categories={community?.categories ?? []}
           userColors={userColors}
+          members={memberShapes}
+          viewMode={viewMode}
         />
       </div>
 
