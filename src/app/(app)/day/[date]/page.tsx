@@ -10,6 +10,30 @@ import { deletePhotos } from '@/lib/supabase/photoStorage'
 import { formatDayHeading, isValidDateKey } from '@/lib/utils/dateUtils'
 import type { CalendarPhoto } from '@/types'
 
+type Mode = 'view' | 'delete' | 'export'
+
+async function downloadPhotos(photoList: CalendarPhoto[], date: string) {
+  const files = await Promise.all(
+    photoList.map(async (p) => {
+      const res = await fetch(p.src)
+      const blob = await res.blob()
+      return new File([blob], `project-s-${date}-${p.id}.jpg`, { type: 'image/jpeg' })
+    }),
+  )
+  if (navigator.canShare?.({ files })) {
+    await navigator.share({ files, title: `Project S – ${date}` })
+  } else {
+    files.forEach((file) => {
+      const url = URL.createObjectURL(file)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = file.name
+      a.click()
+      URL.revokeObjectURL(url)
+    })
+  }
+}
+
 export default function DayPage() {
   const params = useParams<{ date: string }>()
   const router = useRouter()
@@ -18,41 +42,11 @@ export default function DayPage() {
   const { photos, loading, refresh } = usePhotosForDate(date)
 
   const [viewer, setViewer] = useState<{ photos: CalendarPhoto[]; index: number } | null>(null)
-  const [deleteMode, setDeleteMode] = useState(false)
+  const [mode, setMode] = useState<Mode>('view')
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [exporting, setExporting] = useState(false)
-
-  async function handleExport() {
-    if (exporting || photos.length === 0) return
-    setExporting(true)
-    try {
-      const files = await Promise.all(
-        photos.map(async (p) => {
-          const res = await fetch(p.src)
-          const blob = await res.blob()
-          return new File([blob], `project-s-${date}-${p.id}.jpg`, { type: 'image/jpeg' })
-        }),
-      )
-      if (navigator.canShare?.({ files })) {
-        await navigator.share({ files, title: `Project S – ${date}` })
-      } else {
-        files.forEach((file) => {
-          const url = URL.createObjectURL(file)
-          const a = document.createElement('a')
-          a.href = url
-          a.download = file.name
-          a.click()
-          URL.revokeObjectURL(url)
-        })
-      }
-    } catch {
-      // user cancelled share or browser blocked — silent
-    } finally {
-      setExporting(false)
-    }
-  }
 
   const categories = community?.categories ?? []
   const members = community?.members ?? []
@@ -81,8 +75,8 @@ export default function DayPage() {
     })
   }
 
-  function exitDeleteMode() {
-    setDeleteMode(false)
+  function exitMode() {
+    setMode('view')
     setSelectedIds(new Set())
     setConfirmDelete(false)
   }
@@ -93,9 +87,23 @@ export default function DayPage() {
     try {
       await deletePhotos(Array.from(selectedIds))
       await refresh()
-      exitDeleteMode()
+      exitMode()
     } finally {
       setDeleting(false)
+    }
+  }
+
+  async function handleConfirmExport() {
+    if (exporting || selectedIds.size === 0) return
+    setExporting(true)
+    try {
+      const selected = photos.filter((p) => selectedIds.has(p.id))
+      await downloadPhotos(selected, date)
+      exitMode()
+    } catch {
+      // user cancelled share
+    } finally {
+      setExporting(false)
     }
   }
 
@@ -103,6 +111,8 @@ export default function DayPage() {
     const member = members.find((m) => m.id === userId)
     return { name: member?.displayName.split(' ')[0] ?? '?', color: member?.avatarColor ?? '#a1a1aa' }
   }
+
+  const isSelectMode = mode === 'delete' || mode === 'export'
 
   return (
     <main className="min-h-[100dvh] pb-28">
@@ -114,38 +124,47 @@ export default function DayPage() {
         <h1 className="text-base font-semibold text-ink">{formatDayHeading(date)}</h1>
         {photos.length > 0 ? (
           <div className="flex items-center gap-1">
-            {!deleteMode && (
-              <button
-                aria-label="Export photos"
-                onClick={handleExport}
-                disabled={exporting}
-                className="px-2 py-1 text-ink-muted disabled:opacity-40"
-              >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                  <polyline points="7 10 12 15 17 10" />
-                  <line x1="12" y1="15" x2="12" y2="3" />
-                </svg>
+            {mode === 'view' && (
+              <>
+                <button
+                  aria-label="Export photos"
+                  onClick={() => setMode('export')}
+                  className="px-2 py-1 text-ink-muted"
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                    <polyline points="7 10 12 15 17 10" />
+                    <line x1="12" y1="15" x2="12" y2="3" />
+                  </svg>
+                </button>
+                <button
+                  aria-label="Delete photos"
+                  onClick={() => setMode('delete')}
+                  className="px-2 py-1 text-ink-muted"
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M3 6h18" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" /><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                  </svg>
+                </button>
+              </>
+            )}
+            {isSelectMode && (
+              <button onClick={exitMode} className="px-2 py-1 text-sm font-medium text-ink-muted">
+                Cancel
               </button>
             )}
-            <button
-              aria-label={deleteMode ? 'Cancel delete' : 'Delete photos'}
-              onClick={() => (deleteMode ? exitDeleteMode() : setDeleteMode(true))}
-              className="px-2 py-1 text-ink-muted"
-            >
-              {deleteMode ? (
-                <span className="text-sm font-medium">Cancel</span>
-              ) : (
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M3 6h18" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" /><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                </svg>
-              )}
-            </button>
           </div>
         ) : (
           <div className="w-9" />
         )}
       </header>
+
+      {/* Mode label */}
+      {isSelectMode && (
+        <p className="px-4 pb-1 text-xs text-ink-muted">
+          {mode === 'export' ? 'Select photos to export' : 'Select photos to delete'}
+        </p>
+      )}
 
       {/* Content */}
       {!loading && photos.length === 0 && (
@@ -169,7 +188,7 @@ export default function DayPage() {
                     <button
                       className="relative block aspect-square w-full overflow-hidden rounded-2xl"
                       onClick={() =>
-                        deleteMode
+                        isSelectMode
                           ? toggleSelect(photo.id)
                           : setViewer({ photos: catPhotos, index: i })
                       }
@@ -179,7 +198,7 @@ export default function DayPage() {
                         src={photo.src}
                         alt=""
                         className="h-full w-full object-cover transition-opacity"
-                        style={{ opacity: deleteMode && !selected ? 0.4 : 1 }}
+                        style={{ opacity: isSelectMode && !selected ? 0.4 : 1 }}
                       />
                       {/* User badge */}
                       <span className="absolute bottom-1.5 left-1.5 flex items-center gap-1 rounded-full bg-black/55 px-2 py-0.5">
@@ -187,7 +206,7 @@ export default function DayPage() {
                         <span className="text-[10px] font-medium text-white">{badge.name}</span>
                       </span>
                       {/* Selector circle */}
-                      {deleteMode && (
+                      {isSelectMode && (
                         <span
                           className="absolute right-2 top-2 flex h-5 w-5 items-center justify-center rounded-full border-2"
                           style={{
@@ -199,8 +218,7 @@ export default function DayPage() {
                         </span>
                       )}
                     </button>
-                    {/* Meal analysis chip / card */}
-                    {!deleteMode && photo.categoryId === mealsCategoryId && (
+                    {!isSelectMode && photo.categoryId === mealsCategoryId && (
                       <MealAnalysisCard photoId={photo.id} />
                     )}
                   </div>
@@ -212,7 +230,7 @@ export default function DayPage() {
       </div>
 
       {/* Delete bottom bar */}
-      {deleteMode && selectedIds.size > 0 && (
+      {mode === 'delete' && selectedIds.size > 0 && (
         <div
           className="fixed inset-x-0 z-40 px-5"
           style={{ bottom: 'calc(56px + env(safe-area-inset-bottom) + 12px)' }}
@@ -239,6 +257,22 @@ export default function DayPage() {
               Delete ({selectedIds.size})
             </button>
           )}
+        </div>
+      )}
+
+      {/* Export bottom bar */}
+      {mode === 'export' && selectedIds.size > 0 && (
+        <div
+          className="fixed inset-x-0 z-40 px-5"
+          style={{ bottom: 'calc(56px + env(safe-area-inset-bottom) + 12px)' }}
+        >
+          <button
+            disabled={exporting}
+            onClick={handleConfirmExport}
+            className="w-full rounded-2xl bg-accent py-4 font-semibold text-zinc-950 shadow-lg disabled:opacity-60"
+          >
+            {exporting ? 'Exporting…' : `Export (${selectedIds.size})`}
+          </button>
         </div>
       )}
 

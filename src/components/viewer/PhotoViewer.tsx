@@ -28,6 +28,31 @@ export function PhotoViewer({
   const [index, setIndex] = useState(initialIndex)
   const [panel, setPanel] = useState<Panel>('actions')
   const [busy, setBusy] = useState(false)
+  const [sharing, setSharing] = useState(false)
+
+  async function handleShare() {
+    if (sharing) return
+    setSharing(true)
+    try {
+      const res = await fetch(current.src)
+      const blob = await res.blob()
+      const file = new File([blob], `project-s-${current.id}.jpg`, { type: 'image/jpeg' })
+      if (navigator.canShare?.({ files: [file] })) {
+        await navigator.share({ files: [file] })
+      } else {
+        const url = URL.createObjectURL(file)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = file.name
+        a.click()
+        URL.revokeObjectURL(url)
+      }
+    } catch {
+      // cancelled
+    } finally {
+      setSharing(false)
+    }
+  }
 
   // Body scroll lock
   useEffect(() => {
@@ -89,7 +114,18 @@ export function PhotoViewer({
         <span className="text-sm font-medium text-zinc-400">
           {index + 1} / {localPhotos.length}
         </span>
-        <div className="w-8" />
+        <button
+          aria-label="Share photo"
+          onClick={handleShare}
+          disabled={sharing}
+          className="px-2 py-1 text-zinc-400 disabled:opacity-40"
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+            <polyline points="7 10 12 15 17 10" />
+            <line x1="12" y1="15" x2="12" y2="3" />
+          </svg>
+        </button>
       </div>
 
       {/* Carousel */}
