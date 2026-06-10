@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { XPBar } from '@/components/profile/XPBar'
 import { BadgeGrid } from '@/components/profile/BadgeGrid'
 import { useActiveUser } from '@/lib/hooks/useActiveUser'
@@ -72,6 +73,10 @@ export default function ProfilePage() {
         >
           Settings <span className="text-ink-muted">›</span>
         </Link>
+
+        <div className="flex justify-center pt-2 opacity-20">
+          <Image src="/logo.png" alt="Project S" width={32} height={32} />
+        </div>
       </div>
     </main>
   )

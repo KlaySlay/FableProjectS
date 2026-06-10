@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Image from 'next/image'
 import { sendMagicLink } from '@/lib/supabase/userStorage'
 
 export default function LoginPage() {
@@ -27,7 +28,7 @@ export default function LoginPage() {
 
   return (
     <main className="flex h-[100dvh] flex-col items-center justify-center bg-bg px-8">
-      <h1 className="mb-2 text-4xl font-bold tracking-tight text-ink">Project S</h1>
+      <Image src="/logo.png" alt="Project S" width={96} height={96} className="mb-4" priority />
       <p className="mb-12 text-sm text-ink-muted">Your shared accountability journal</p>
 
       <form onSubmit={handleSend} className="w-full max-w-sm space-y-4" suppressHydrationWarning>

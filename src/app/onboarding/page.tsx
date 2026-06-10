@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { createProfile, getCurrentProfile, isUsernameTaken } from '@/lib/supabase/userStorage'
 import { createCommunity, joinCommunityByCode } from '@/lib/supabase/communityStorage'
@@ -126,7 +127,10 @@ export default function OnboardingPage() {
   }
 
   return (
-    <main className="flex h-[100dvh] flex-col bg-bg px-6 pb-10 pt-16">
+    <main className="flex h-[100dvh] flex-col bg-bg px-6 pb-10 pt-10">
+      <div className="mb-6 flex justify-center">
+        <Image src="/logo.png" alt="Project S" width={56} height={56} />
+      </div>
       <div className="flex-1">
         {step === 0 && (
           <section className="animate-fade-in space-y-5">
