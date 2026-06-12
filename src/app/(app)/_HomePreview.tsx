@@ -460,6 +460,9 @@ export default function HomePreview({ sandbox = false }: { sandbox?: boolean }) 
       background: 'var(--bg)',
       fontFamily: '-apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif',
       paddingBottom: 'calc(56px + env(safe-area-inset-bottom))',
+      // The app layout adds paddingBottom to its wrapper for normal scrollable pages.
+      // Counteract it here so our fixed-height screen doesn't become scrollable.
+      marginBottom: 'calc(-56px - env(safe-area-inset-bottom))',
     }}>
       <style>{`
         .ps-pager::-webkit-scrollbar { display: none; }
