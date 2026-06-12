@@ -166,10 +166,12 @@ export function subscribeToPhotos(
     onInsert?: (photo: Photo) => void
     onDelete?: (photoId: string) => void
   },
+  channelSuffix?: string,
 ): () => void {
   const supabase = getSupabase()
+  const channelName = channelSuffix ? `photos-${communityId}-${channelSuffix}` : `photos-${communityId}`
   const channel = supabase
-    .channel(`photos-${communityId}`)
+    .channel(channelName)
     .on(
       'postgres_changes',
       { event: 'INSERT', schema: 'public', table: 'photos', filter: `community_id=eq.${communityId}` },

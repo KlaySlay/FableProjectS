@@ -59,7 +59,7 @@ export function usePhotosForMonth(
           return next
         })
       },
-    })
+    }, `${year}-${month}`)
   }, [community, year, month, toCalendarPhoto])
 
   return { photosByDate, refresh }

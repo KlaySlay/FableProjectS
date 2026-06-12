@@ -47,16 +47,27 @@ export default function DayPage() {
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [exporting, setExporting] = useState(false)
+  // 'both' or a member userId — persisted in localStorage
+  const [memberFilter, setMemberFilter] = useState<string>(() => {
+    if (typeof window === 'undefined') return 'both'
+    return localStorage.getItem('ps-member-filter') ?? 'both'
+  })
 
   const categories = community?.categories ?? []
   const members = community?.members ?? []
   const mealsCategoryId = categories.find((c) => c.slug === 'meals')?.id
 
+  function selectMember(val: string) {
+    setMemberFilter(val)
+    localStorage.setItem('ps-member-filter', val)
+  }
+
   const grouped = useMemo(() => {
+    const filtered = memberFilter === 'both' ? photos : photos.filter((p) => p.userId === memberFilter)
     return categories
-      .map((cat) => ({ category: cat, photos: photos.filter((p) => p.categoryId === cat.id) }))
+      .map((cat) => ({ category: cat, photos: filtered.filter((p) => p.categoryId === cat.id) }))
       .filter((g) => g.photos.length > 0)
-  }, [categories, photos])
+  }, [categories, photos, memberFilter])
 
   if (!isValidDateKey(date)) {
     return (
@@ -158,6 +169,27 @@ export default function DayPage() {
           <div className="w-9" />
         )}
       </header>
+
+      {/* Member filter */}
+      {members.length > 1 && !isSelectMode && (
+        <div className="flex gap-2 px-4 pb-2 pt-1">
+          {[{ id: 'both', label: 'Both' }, ...members.map((m) => ({ id: m.id, label: m.displayName.split(' ')[0] }))].map((opt) => (
+            <button
+              key={opt.id}
+              onClick={() => selectMember(opt.id)}
+              className="rounded-full px-4 py-1.5 text-xs font-semibold transition-colors"
+              style={{
+                background: memberFilter === opt.id ? 'var(--accent)' : 'var(--surface)',
+                color: memberFilter === opt.id ? '#09090b' : 'var(--ink-muted)',
+                border: 'none',
+                cursor: 'pointer',
+              }}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Mode label */}
       {isSelectMode && (
