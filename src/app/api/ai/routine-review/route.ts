@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getServerSupabase } from '@/lib/supabase/server'
 import { isRateLimited } from '@/lib/ai/rateLimit'
-import { AI_MODEL, getAnthropic, parseModelJSON, responseText } from '@/lib/ai/anthropic'
+import { getGemini, parseModelJSON } from '@/lib/ai/gemini'
 import { isAIAllowed } from '@/lib/ai/allowList'
 import type { RoutineReview } from '@/types'
 
@@ -80,14 +80,12 @@ export async function POST(request: Request) {
   }
 
   try {
-    const message = await getAnthropic().messages.create({
-      model: AI_MODEL,
-      max_tokens: 400,
-      system: SYSTEM_PROMPT,
-      messages: [{ role: 'user', content: parts.join(' ') }],
+    const response = await getGemini().generateContent({
+      systemInstruction: SYSTEM_PROMPT,
+      contents: [{ role: 'user', parts: [{ text: parts.join(' ') }] }],
     })
 
-    const result = parseModelJSON<RoutineReview>(responseText(message))
+    const result = parseModelJSON<RoutineReview>(response.response.text())
 
     await supabase.from('ai_sessions').insert({
       user_id: user.id,

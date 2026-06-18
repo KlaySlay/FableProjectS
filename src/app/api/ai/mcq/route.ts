@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getServerSupabase } from '@/lib/supabase/server'
 import { isRateLimited } from '@/lib/ai/rateLimit'
-import { AI_MODEL, fetchImageAsBase64, getAnthropic, parseModelJSON, responseText } from '@/lib/ai/anthropic'
+import { fetchImageAsBase64, getGemini, parseModelJSON } from '@/lib/ai/gemini'
 import { isAIAllowed } from '@/lib/ai/allowList'
 import type { MCQQuestion } from '@/types'
 
@@ -49,22 +49,18 @@ export async function POST(request: Request) {
 
   try {
     const image = await fetchImageAsBase64(photo.public_url)
-    const message = await getAnthropic().messages.create({
-      model: AI_MODEL,
-      max_tokens: 2000,
-      system: systemPrompt(topic.exam_name, topic.subject),
-      messages: [
-        {
-          role: 'user',
-          content: [
-            { type: 'image', source: { type: 'base64', media_type: image.mediaType, data: image.data } },
-            { type: 'text', text: 'Generate the quiz from this study material.' },
-          ],
-        },
-      ],
+    const response = await getGemini().generateContent({
+      systemInstruction: systemPrompt(topic.exam_name, topic.subject),
+      contents: [{
+        role: 'user',
+        parts: [
+          { inlineData: { mimeType: image.mimeType, data: image.data } },
+          { text: 'Generate the quiz from this study material.' },
+        ],
+      }],
     })
 
-    const parsed = parseModelJSON<{ questions?: MCQQuestion[]; error?: string }>(responseText(message))
+    const parsed = parseModelJSON<{ questions?: MCQQuestion[]; error?: string }>(response.response.text())
 
     if (parsed.error || !parsed.questions) {
       // Failed reads do not consume the photo's cache slot

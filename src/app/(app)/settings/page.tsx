@@ -7,6 +7,7 @@ import { useTheme, ACCENT_PRESETS } from '@/lib/hooks/useTheme'
 import { useToast } from '@/components/shared/Toast'
 import { getSupabase } from '@/lib/supabase/client'
 import { isUsernameTaken, signOut, updateProfile } from '@/lib/supabase/userStorage'
+import { usePushNotifications } from '@/hooks/usePushNotifications'
 import type { StudyTopic, ThemePreference } from '@/types'
 
 const NUDGE_PREF_KEY = 'ps_nudge_enabled'
@@ -26,6 +27,7 @@ export default function SettingsPage() {
   const [topicSubject, setTopicSubject] = useState('')
   const [addingTopic, setAddingTopic] = useState(false)
   const [nudgeEnabled, setNudgeEnabled] = useState(true)
+  const { status: pushStatus, subscribe: subscribePush, unsubscribe: unsubscribePush } = usePushNotifications()
 
   useEffect(() => {
     if (!user) return
@@ -297,25 +299,58 @@ export default function SettingsPage() {
         {/* Notifications */}
         <section>
           <h2 className="mb-2.5 text-sm font-semibold text-ink-muted">Notifications</h2>
-          <button
-            onClick={() => {
-              const next = !nudgeEnabled
-              setNudgeEnabled(next)
-              localStorage.setItem(NUDGE_PREF_KEY, next ? 'on' : 'off')
-            }}
-            className="flex w-full items-center justify-between rounded-2xl bg-surface px-4 py-3.5"
-          >
-            <span className="text-sm font-medium text-ink">Daily nudge banner</span>
-            <span
-              className="relative h-6 w-11 rounded-full transition-colors"
-              style={{ backgroundColor: nudgeEnabled ? 'var(--accent)' : 'var(--surface-2)' }}
+          <div className="space-y-2">
+            <button
+              onClick={() => {
+                const next = !nudgeEnabled
+                setNudgeEnabled(next)
+                localStorage.setItem(NUDGE_PREF_KEY, next ? 'on' : 'off')
+              }}
+              className="flex w-full items-center justify-between rounded-2xl bg-surface px-4 py-3.5"
             >
+              <span className="text-sm font-medium text-ink">Daily nudge banner</span>
               <span
-                className="absolute top-0.5 h-5 w-5 rounded-full bg-white transition-all"
-                style={{ left: nudgeEnabled ? '22px' : '2px' }}
-              />
-            </span>
-          </button>
+                className="relative h-6 w-11 rounded-full transition-colors"
+                style={{ backgroundColor: nudgeEnabled ? 'var(--accent)' : 'var(--surface-2)' }}
+              >
+                <span
+                  className="absolute top-0.5 h-5 w-5 rounded-full bg-white transition-all"
+                  style={{ left: nudgeEnabled ? '22px' : '2px' }}
+                />
+              </span>
+            </button>
+
+            {pushStatus !== 'unsupported' && (
+              <button
+                disabled={pushStatus === 'loading' || pushStatus === 'denied'}
+                onClick={pushStatus === 'subscribed' ? unsubscribePush : subscribePush}
+                className="flex w-full items-center justify-between rounded-2xl bg-surface px-4 py-3.5 disabled:opacity-50"
+              >
+                <div>
+                  <span className="text-sm font-medium text-ink">Push notifications</span>
+                  {pushStatus === 'denied' && (
+                    <p className="text-[11px] text-ink-muted">Blocked — allow in browser settings</p>
+                  )}
+                </div>
+                {pushStatus === 'loading' ? (
+                  <span className="text-xs text-ink-muted">…</span>
+                ) : (
+                  <span
+                    className="relative h-6 w-11 rounded-full transition-colors"
+                    style={{
+                      backgroundColor:
+                        pushStatus === 'subscribed' ? 'var(--accent)' : 'var(--surface-2)',
+                    }}
+                  >
+                    <span
+                      className="absolute top-0.5 h-5 w-5 rounded-full bg-white transition-all"
+                      style={{ left: pushStatus === 'subscribed' ? '22px' : '2px' }}
+                    />
+                  </span>
+                )}
+              </button>
+            )}
+          </div>
         </section>
       </div>
     </main>

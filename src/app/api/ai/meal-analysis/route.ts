@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getServerSupabase } from '@/lib/supabase/server'
 import { isRateLimited } from '@/lib/ai/rateLimit'
-import { AI_MODEL, fetchImageAsBase64, getAnthropic, parseModelJSON, responseText } from '@/lib/ai/anthropic'
+import { fetchImageAsBase64, getGemini, parseModelJSON } from '@/lib/ai/gemini'
 import { isAIAllowed } from '@/lib/ai/allowList'
 import type { MealAnalysis } from '@/types'
 
@@ -45,22 +45,18 @@ export async function POST(request: Request) {
 
   try {
     const image = await fetchImageAsBase64(photo.public_url)
-    const message = await getAnthropic().messages.create({
-      model: AI_MODEL,
-      max_tokens: 300,
-      system: SYSTEM_PROMPT,
-      messages: [
-        {
-          role: 'user',
-          content: [
-            { type: 'image', source: { type: 'base64', media_type: image.mediaType, data: image.data } },
-            { type: 'text', text: 'Analyse this meal.' },
-          ],
-        },
-      ],
+    const response = await getGemini().generateContent({
+      systemInstruction: SYSTEM_PROMPT,
+      contents: [{
+        role: 'user',
+        parts: [
+          { inlineData: { mimeType: image.mimeType, data: image.data } },
+          { text: 'Analyse this meal.' },
+        ],
+      }],
     })
 
-    const result = parseModelJSON<MealAnalysis | { error: string }>(responseText(message))
+    const result = parseModelJSON<MealAnalysis | { error: string }>(response.response.text())
 
     await supabase.from('ai_sessions').insert({
       user_id: user.id,

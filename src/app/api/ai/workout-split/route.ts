@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getServerSupabase } from '@/lib/supabase/server'
 import { isRateLimited } from '@/lib/ai/rateLimit'
-import { AI_MODEL, getAnthropic, parseModelJSON, responseText } from '@/lib/ai/anthropic'
+import { getGemini, parseModelJSON } from '@/lib/ai/gemini'
 import { isAIAllowed } from '@/lib/ai/allowList'
 import type { WorkoutSplitDay } from '@/types'
 
@@ -35,14 +35,12 @@ export async function POST(request: Request) {
   }
 
   try {
-    const message = await getAnthropic().messages.create({
-      model: AI_MODEL,
-      max_tokens: 800,
-      system: systemPrompt(daysPerWeek, goal),
-      messages: [{ role: 'user', content: 'Generate my training split.' }],
+    const response = await getGemini().generateContent({
+      systemInstruction: systemPrompt(daysPerWeek, goal),
+      contents: [{ role: 'user', parts: [{ text: 'Generate my training split.' }] }],
     })
 
-    const result = parseModelJSON<{ split: WorkoutSplitDay[] }>(responseText(message))
+    const result = parseModelJSON<{ split: WorkoutSplitDay[] }>(response.response.text())
 
     await supabase.from('ai_sessions').insert({
       user_id: user.id,
