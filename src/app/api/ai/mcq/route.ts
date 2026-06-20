@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getServerSupabase } from '@/lib/supabase/server'
 import { isRateLimited } from '@/lib/ai/rateLimit'
-import { fetchImageAsBase64, getGemini, parseModelJSON } from '@/lib/ai/gemini'
+import { fetchImageAsBase64, generateWithImage, parseModelJSON } from '@/lib/ai/gemini'
 import { isAIAllowed } from '@/lib/ai/allowList'
 import type { MCQQuestion } from '@/types'
 
@@ -49,18 +49,8 @@ export async function POST(request: Request) {
 
   try {
     const image = await fetchImageAsBase64(photo.public_url)
-    const response = await getGemini().generateContent({
-      systemInstruction: systemPrompt(topic.exam_name, topic.subject),
-      contents: [{
-        role: 'user',
-        parts: [
-          { inlineData: { mimeType: image.mimeType, data: image.data } },
-          { text: 'Generate the quiz from this study material.' },
-        ],
-      }],
-    })
-
-    const parsed = parseModelJSON<{ questions?: MCQQuestion[]; error?: string }>(response.response.text())
+    const text = await generateWithImage(systemPrompt(topic.exam_name, topic.subject), image, 'Generate the quiz from this study material.')
+    const parsed = parseModelJSON<{ questions?: MCQQuestion[]; error?: string }>(text)
 
     if (parsed.error || !parsed.questions) {
       // Failed reads do not consume the photo's cache slot

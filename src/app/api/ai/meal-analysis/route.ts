@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getServerSupabase } from '@/lib/supabase/server'
 import { isRateLimited } from '@/lib/ai/rateLimit'
-import { fetchImageAsBase64, getGemini, parseModelJSON } from '@/lib/ai/gemini'
+import { fetchImageAsBase64, generateWithImage, parseModelJSON } from '@/lib/ai/gemini'
 import { isAIAllowed } from '@/lib/ai/allowList'
 import type { MealAnalysis } from '@/types'
 
@@ -45,18 +45,8 @@ export async function POST(request: Request) {
 
   try {
     const image = await fetchImageAsBase64(photo.public_url)
-    const response = await getGemini().generateContent({
-      systemInstruction: SYSTEM_PROMPT,
-      contents: [{
-        role: 'user',
-        parts: [
-          { inlineData: { mimeType: image.mimeType, data: image.data } },
-          { text: 'Analyse this meal.' },
-        ],
-      }],
-    })
-
-    const result = parseModelJSON<MealAnalysis | { error: string }>(response.response.text())
+    const text = await generateWithImage(SYSTEM_PROMPT, image, 'Analyse this meal.')
+    const result = parseModelJSON<MealAnalysis | { error: string }>(text)
 
     await supabase.from('ai_sessions').insert({
       user_id: user.id,

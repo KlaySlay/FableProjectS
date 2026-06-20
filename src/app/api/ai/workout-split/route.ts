@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getServerSupabase } from '@/lib/supabase/server'
 import { isRateLimited } from '@/lib/ai/rateLimit'
-import { getGemini, parseModelJSON } from '@/lib/ai/gemini'
+import { generateText, parseModelJSON } from '@/lib/ai/gemini'
 import { isAIAllowed } from '@/lib/ai/allowList'
 import type { WorkoutSplitDay } from '@/types'
 
@@ -35,12 +35,8 @@ export async function POST(request: Request) {
   }
 
   try {
-    const response = await getGemini().generateContent({
-      systemInstruction: systemPrompt(daysPerWeek, goal),
-      contents: [{ role: 'user', parts: [{ text: 'Generate my training split.' }] }],
-    })
-
-    const result = parseModelJSON<{ split: WorkoutSplitDay[] }>(response.response.text())
+    const text = await generateText(systemPrompt(daysPerWeek, goal), 'Generate my training split.')
+    const result = parseModelJSON<{ split: WorkoutSplitDay[] }>(text)
 
     await supabase.from('ai_sessions').insert({
       user_id: user.id,

@@ -1,21 +1,64 @@
 import 'server-only'
-import { GoogleGenerativeAI } from '@google/generative-ai'
 
+const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta/models'
 export const GEMINI_MODEL = 'gemini-2.0-flash'
 
-let client: GoogleGenerativeAI | null = null
+type Part = { text: string } | { inlineData: { mimeType: string; data: string } }
 
-function getClient() {
-  if (!client) client = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
-  return client
+interface GeminiRequest {
+  systemInstruction?: { parts: [{ text: string }] }
+  contents: { role: string; parts: Part[] }[]
 }
 
-export function getGemini() {
-  return getClient().getGenerativeModel({ model: GEMINI_MODEL })
+async function generateContent(body: GeminiRequest): Promise<string> {
+  const apiKey = process.env.GEMINI_API_KEY
+  if (!apiKey) throw new Error('GEMINI_API_KEY not set')
+
+  const res = await fetch(`${GEMINI_API_BASE}/${GEMINI_MODEL}:generateContent?key=${apiKey}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+
+  if (!res.ok) {
+    const err = await res.text()
+    throw new Error(`Gemini API error ${res.status}: ${err}`)
+  }
+
+  const data = await res.json() as {
+    candidates: { content: { parts: { text: string }[] } }[]
+  }
+  return data.candidates[0].content.parts.map((p) => p.text).join('')
+}
+
+/** Text-only generation. */
+export async function generateText(systemPrompt: string, userMessage: string): Promise<string> {
+  return generateContent({
+    systemInstruction: { parts: [{ text: systemPrompt }] },
+    contents: [{ role: 'user', parts: [{ text: userMessage }] }],
+  })
+}
+
+/** Vision generation — image + text. */
+export async function generateWithImage(
+  systemPrompt: string,
+  image: { data: string; mimeType: string },
+  userMessage: string,
+): Promise<string> {
+  return generateContent({
+    systemInstruction: { parts: [{ text: systemPrompt }] },
+    contents: [{
+      role: 'user',
+      parts: [
+        { inlineData: { mimeType: image.mimeType, data: image.data } },
+        { text: userMessage },
+      ],
+    }],
+  })
 }
 
 /** Fetch an image URL and return base64 for Gemini inline data. */
-export async function fetchImageAsBase64(url: string): Promise<{ data: string; mimeType: 'image/jpeg' }> {
+export async function fetchImageAsBase64(url: string): Promise<{ data: string; mimeType: string }> {
   const res = await fetch(url)
   if (!res.ok) throw new Error(`Failed to fetch image: ${res.status}`)
   const buffer = Buffer.from(await res.arrayBuffer())

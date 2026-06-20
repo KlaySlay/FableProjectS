@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getServerSupabase } from '@/lib/supabase/server'
 import { isRateLimited } from '@/lib/ai/rateLimit'
-import { getGemini, parseModelJSON } from '@/lib/ai/gemini'
+import { generateText, parseModelJSON } from '@/lib/ai/gemini'
 import { isAIAllowed } from '@/lib/ai/allowList'
 import type { RoutineReview } from '@/types'
 
@@ -80,12 +80,8 @@ export async function POST(request: Request) {
   }
 
   try {
-    const response = await getGemini().generateContent({
-      systemInstruction: SYSTEM_PROMPT,
-      contents: [{ role: 'user', parts: [{ text: parts.join(' ') }] }],
-    })
-
-    const result = parseModelJSON<RoutineReview>(response.response.text())
+    const text = await generateText(SYSTEM_PROMPT, parts.join(' '))
+    const result = parseModelJSON<RoutineReview>(text)
 
     await supabase.from('ai_sessions').insert({
       user_id: user.id,
