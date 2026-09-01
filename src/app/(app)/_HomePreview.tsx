@@ -656,9 +656,7 @@ export default function HomePreview({ sandbox = false }: { sandbox?: boolean }) 
           <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--ink)', letterSpacing: '-0.01em' }}>
             {community.name}
           </span>
-          {myCommunities.length > 1 && (
-            <span style={{ fontSize: 11, color: 'var(--accent)', fontWeight: 700 }}>▾</span>
-          )}
+          <span style={{ fontSize: 15, color: 'var(--accent)', fontWeight: 900, lineHeight: 1 }}>▾</span>
         </button>
       )}
 
