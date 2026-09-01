@@ -598,26 +598,6 @@ export default function HomePreview({ sandbox = false }: { sandbox?: boolean }) 
         </div>
       )}
 
-      {/* ── Community switcher ───────────────────────────────────────────── */}
-      {community && (
-        <button
-          onClick={() => setSwitcherOpen(true)}
-          style={{
-            display: 'flex', alignItems: 'center', gap: 4,
-            margin: '10px 16px 0', padding: '2px 0',
-            background: 'none', border: 'none', alignSelf: 'flex-start',
-            flexShrink: 0,
-          }}
-        >
-          <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--ink)', letterSpacing: '-0.01em' }}>
-            {community.name}
-          </span>
-          {myCommunities.length > 1 && (
-            <span style={{ fontSize: 10, color: 'var(--ink-muted)' }}>↕</span>
-          )}
-        </button>
-      )}
-
       {/* ── Streak banner (top) ───────────────────────────────────────────── */}
       <div style={{
         margin: '8px 16px 0',
@@ -661,6 +641,26 @@ export default function HomePreview({ sandbox = false }: { sandbox?: boolean }) 
           </div>
         )}
       </div>
+
+      {/* ── Community switcher ───────────────────────────────────────────── */}
+      {community && (
+        <button
+          onClick={() => setSwitcherOpen(true)}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 6,
+            margin: '10px 16px 0', padding: '6px 12px',
+            background: 'var(--surface)', borderRadius: 20, border: 'none',
+            alignSelf: 'flex-start', flexShrink: 0,
+          }}
+        >
+          <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--ink)', letterSpacing: '-0.01em' }}>
+            {community.name}
+          </span>
+          {myCommunities.length > 1 && (
+            <span style={{ fontSize: 11, color: 'var(--accent)', fontWeight: 700 }}>▾</span>
+          )}
+        </button>
+      )}
 
       {/* ── Month header ─────────────────────────────────────────────────── */}
       <div style={{
