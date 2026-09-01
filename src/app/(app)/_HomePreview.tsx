@@ -371,7 +371,7 @@ function DayCard({
 
         <div style={{
           display: 'grid',
-          gridTemplateColumns: `repeat(${tiles.length}, 1fr)`,
+          gridTemplateColumns: 'repeat(3, 1fr)',
           gap: 8,
           marginBottom: categories.length > 0 ? 10 : 0,
         }}>
@@ -398,6 +398,16 @@ function DayCard({
                 boxShadow: '0 0 0 1.5px rgba(0,0,0,0.35)',
               }} />
             </div>
+          ))}
+          {Array.from({ length: Math.max(0, 3 - tiles.length) }).map((_, i) => (
+            <div
+              key={`empty-${i}`}
+              style={{
+                aspectRatio: '1',
+                borderRadius: 12,
+                background: 'var(--surface-2)',
+              }}
+            />
           ))}
         </div>
 
