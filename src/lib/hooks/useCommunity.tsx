@@ -13,6 +13,7 @@ type CommunityContextValue = {
   myCommunities: { id: string; name: string; memberCount: number; role: string }[]
   switchCommunity: (communityId: string) => Promise<void>
   refreshCommunity: () => Promise<void>
+  refreshMyCommunities: () => Promise<void>
 }
 
 const CommunityContext = createContext<CommunityContextValue>({
@@ -21,6 +22,7 @@ const CommunityContext = createContext<CommunityContextValue>({
   myCommunities: [],
   switchCommunity: async () => {},
   refreshCommunity: async () => {},
+  refreshMyCommunities: async () => {},
 })
 
 export function CommunityProvider({ children }: { children: React.ReactNode }) {
@@ -72,9 +74,14 @@ export function CommunityProvider({ children }: { children: React.ReactNode }) {
     if (user) setMyCommunities(await getMyCommunities(user.id))
   }, [community, user])
 
+  const refreshMyCommunities = useCallback(async () => {
+    if (!user) return
+    setMyCommunities(await getMyCommunities(user.id))
+  }, [user])
+
   return (
     <CommunityContext.Provider
-      value={{ community, loading, myCommunities, switchCommunity, refreshCommunity }}
+      value={{ community, loading, myCommunities, switchCommunity, refreshCommunity, refreshMyCommunities }}
     >
       {children}
     </CommunityContext.Provider>

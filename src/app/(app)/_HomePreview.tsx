@@ -10,6 +10,7 @@ import { formatMetric } from '@/lib/utils/metricUtils'
 import { FAB } from '@/components/shared/FAB'
 import { AddPhotoModal } from '@/components/upload/AddPhotoModal'
 import { MCQFlow } from '@/components/coach/MCQScreen'
+import { CommunitySwitcherSheet } from '@/components/community/CommunitySwitcherSheet'
 import type { CalendarPhoto, Category } from '@/types'
 
 // ── Constants ──────────────────────────────────────────────────────────────────
@@ -495,7 +496,7 @@ function DayFeed({
 // sandbox=true renders the purple preview badge (used by /preview route only)
 export default function HomePreview({ sandbox = false }: { sandbox?: boolean }) {
   const { user } = useActiveUser()
-  const { community } = useCommunity()
+  const { community, myCommunities } = useCommunity()
   const now = new Date()
 
   const [year, setYear] = useState(now.getFullYear())
@@ -503,6 +504,7 @@ export default function HomePreview({ sandbox = false }: { sandbox?: boolean }) 
   const [streak, setStreak] = useState(0)
   const [modalOpen, setModalOpen] = useState(false)
   const [mcqPhotoId, setMcqPhotoId] = useState<string | null>(null)
+  const [switcherOpen, setSwitcherOpen] = useState(false)
   const [memberFilter, setMemberFilter] = useState<string>(() => {
     if (typeof window === 'undefined') return 'both'
     return localStorage.getItem('ps-member-filter') ?? 'both'
@@ -594,6 +596,26 @@ export default function HomePreview({ sandbox = false }: { sandbox?: boolean }) 
             <Link href="/" style={{ color: '#fff', textDecoration: 'none' }}>exit →</Link>
           </span>
         </div>
+      )}
+
+      {/* ── Community switcher ───────────────────────────────────────────── */}
+      {community && (
+        <button
+          onClick={() => setSwitcherOpen(true)}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 4,
+            margin: '10px 16px 0', padding: '2px 0',
+            background: 'none', border: 'none', alignSelf: 'flex-start',
+            flexShrink: 0,
+          }}
+        >
+          <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--ink)', letterSpacing: '-0.01em' }}>
+            {community.name}
+          </span>
+          {myCommunities.length > 1 && (
+            <span style={{ fontSize: 10, color: 'var(--ink-muted)' }}>↕</span>
+          )}
+        </button>
       )}
 
       {/* ── Streak banner (top) ───────────────────────────────────────────── */}
@@ -704,6 +726,8 @@ export default function HomePreview({ sandbox = false }: { sandbox?: boolean }) 
       )}
 
       {mcqPhotoId && <MCQFlow photoId={mcqPhotoId} onClose={() => setMcqPhotoId(null)} />}
+
+      <CommunitySwitcherSheet open={switcherOpen} onClose={() => setSwitcherOpen(false)} />
     </main>
   )
 }

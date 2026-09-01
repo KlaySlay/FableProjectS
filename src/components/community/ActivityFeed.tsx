@@ -5,16 +5,27 @@ import Link from 'next/link'
 import { getRecentPhotos, subscribeToPhotos } from '@/lib/supabase/photoStorage'
 import { useCommunity } from '@/lib/hooks/useCommunity'
 import { relativeTime } from '@/lib/utils/dateUtils'
-import type { Photo } from '@/types'
+import type { AppUser, Category, Photo } from '@/types'
 
-export function ActivityFeed() {
-  const { community } = useCommunity()
+export function ActivityFeed({
+  communityId,
+  members,
+  categories,
+}: {
+  communityId?: string
+  members?: AppUser[]
+  categories?: Category[]
+} = {}) {
+  const { community: activeCommunity } = useCommunity()
+  const id = communityId ?? activeCommunity?.id
+  const memberList = members ?? activeCommunity?.members ?? []
+  const categoryList = categories ?? activeCommunity?.categories ?? []
   const [photos, setPhotos] = useState<Photo[]>([])
 
   const load = useCallback(async () => {
-    if (!community) return
-    setPhotos(await getRecentPhotos(community.id, 20))
-  }, [community])
+    if (!id) return
+    setPhotos(await getRecentPhotos(id, 20))
+  }, [id])
 
   useEffect(() => {
     load()
@@ -22,17 +33,17 @@ export function ActivityFeed() {
 
   // Live updates
   useEffect(() => {
-    if (!community) return
-    return subscribeToPhotos(community.id, {
+    if (!id) return
+    return subscribeToPhotos(id, {
       onInsert: (photo) => setPhotos((prev) => [photo, ...prev].slice(0, 20)),
-      onDelete: (id) => setPhotos((prev) => prev.filter((p) => p.id !== id)),
+      onDelete: (delId) => setPhotos((prev) => prev.filter((p) => p.id !== delId)),
     })
-  }, [community?.id]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [id])
 
-  if (!community) return null
+  if (!id) return null
 
-  const memberById = new Map(community.members.map((m) => [m.id, m]))
-  const categoryById = new Map(community.categories.map((c) => [c.id, c]))
+  const memberById = new Map(memberList.map((m) => [m.id, m]))
+  const categoryById = new Map(categoryList.map((c) => [c.id, c]))
 
   return (
     <section>
