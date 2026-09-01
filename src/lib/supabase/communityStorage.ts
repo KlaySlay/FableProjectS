@@ -1,6 +1,6 @@
 import { getSupabase } from './client'
 import { rowToUser } from './userStorage'
-import type { Category, Community } from '@/types'
+import type { Category, Community, MetricType } from '@/types'
 
 type CategoryRow = {
   id: string
@@ -10,6 +10,8 @@ type CategoryRow = {
   emoji: string
   color: string
   sort_order: number
+  metric_type: MetricType
+  metric_required: boolean
 }
 
 function rowToCategory(row: CategoryRow): Category {
@@ -21,6 +23,8 @@ function rowToCategory(row: CategoryRow): Category {
     emoji: row.emoji,
     color: row.color,
     sortOrder: row.sort_order,
+    metricType: row.metric_type,
+    metricRequired: row.metric_required,
   }
 }
 
@@ -145,6 +149,8 @@ export async function addCategory(params: {
   emoji: string
   color: string
   sortOrder: number
+  metricType?: MetricType
+  metricRequired?: boolean
 }): Promise<Category> {
   const supabase = getSupabase()
   const slug = params.label.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'category'
@@ -157,11 +163,26 @@ export async function addCategory(params: {
       emoji: params.emoji,
       color: params.color,
       sort_order: params.sortOrder,
+      metric_type: params.metricType ?? 'none',
+      metric_required: params.metricRequired ?? false,
     })
     .select()
     .single()
   if (error) throw error
   return rowToCategory(data as CategoryRow)
+}
+
+export async function updateCategoryMetric(
+  categoryId: string,
+  metricType: MetricType,
+  metricRequired: boolean,
+): Promise<void> {
+  const supabase = getSupabase()
+  const { error } = await supabase
+    .from('categories')
+    .update({ metric_type: metricType, metric_required: metricType === 'none' ? false : metricRequired })
+    .eq('id', categoryId)
+  if (error) throw error
 }
 
 export async function deleteCategory(categoryId: string): Promise<void> {

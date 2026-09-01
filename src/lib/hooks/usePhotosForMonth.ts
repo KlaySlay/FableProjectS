@@ -19,7 +19,7 @@ export function usePhotosForMonth(
   const toCalendarPhoto = useCallback(
     (p: Photo): CalendarPhoto => {
       const color = community?.categories.find((c) => c.id === p.categoryId)?.color ?? '#71717a'
-      return { id: p.id, categoryId: p.categoryId, userId: p.userId, src: p.publicUrl, categoryColor: color }
+      return { id: p.id, categoryId: p.categoryId, userId: p.userId, src: p.publicUrl, categoryColor: color, metricValue: p.metricValue }
     },
     [community],
   )

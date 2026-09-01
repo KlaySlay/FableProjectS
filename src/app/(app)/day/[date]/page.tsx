@@ -8,6 +8,7 @@ import { usePhotosForDate } from '@/lib/hooks/usePhotosForDate'
 import { useCommunity } from '@/lib/hooks/useCommunity'
 import { deletePhotos } from '@/lib/supabase/photoStorage'
 import { formatDayHeading, isValidDateKey } from '@/lib/utils/dateUtils'
+import { formatMetric } from '@/lib/utils/metricUtils'
 import type { CalendarPhoto } from '@/types'
 
 type Mode = 'view' | 'delete' | 'export'
@@ -215,6 +216,7 @@ export default function DayPage() {
               {catPhotos.map((photo, i) => {
                 const badge = memberBadge(photo.userId)
                 const selected = selectedIds.has(photo.id)
+                const metricLabel = formatMetric(category.metricType, photo.metricValue)
                 return (
                   <div key={photo.id}>
                     <button
@@ -232,6 +234,11 @@ export default function DayPage() {
                         className="h-full w-full object-cover transition-opacity"
                         style={{ opacity: isSelectMode && !selected ? 0.4 : 1 }}
                       />
+                      {metricLabel && (
+                        <span className="absolute left-1.5 top-1.5 rounded-full bg-black/55 px-2 py-0.5 text-[10px] font-bold text-white">
+                          {metricLabel}
+                        </span>
+                      )}
                       {/* User badge */}
                       <span className="absolute bottom-1.5 left-1.5 flex items-center gap-1 rounded-full bg-black/55 px-2 py-0.5">
                         <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: badge.color }} />

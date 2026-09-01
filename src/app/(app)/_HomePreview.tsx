@@ -6,6 +6,7 @@ import { usePhotosForMonth } from '@/lib/hooks/usePhotosForMonth'
 import { useCommunity } from '@/lib/hooks/useCommunity'
 import { useActiveUser } from '@/lib/hooks/useActiveUser'
 import { getStreak } from '@/lib/supabase/xpStorage'
+import { formatMetric } from '@/lib/utils/metricUtils'
 import { FAB } from '@/components/shared/FAB'
 import { AddPhotoModal } from '@/components/upload/AddPhotoModal'
 import { MCQFlow } from '@/components/coach/MCQScreen'
@@ -375,30 +376,48 @@ function DayCard({
           gap: 8,
           marginBottom: categories.length > 0 ? 10 : 0,
         }}>
-          {tiles.map(({ photo, categoryId }) => (
-            <div
-              key={photo.id}
-              style={{
-                position: 'relative',
-                aspectRatio: '1',
-                borderRadius: 12,
-                overflow: 'hidden',
-              }}
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={photo.src}
-                alt=""
-                style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-              />
-              <div style={{
-                position: 'absolute', bottom: 6, left: 6,
-                width: 7, height: 7, borderRadius: '50%',
-                background: catColor(categoryId),
-                boxShadow: '0 0 0 1.5px rgba(0,0,0,0.35)',
-              }} />
-            </div>
-          ))}
+          {tiles.map(({ photo, categoryId }) => {
+            const cat = categories.find(c => c.id === categoryId)
+            const metricLabel = cat ? formatMetric(cat.metricType, photo.metricValue) : null
+            return (
+              <div
+                key={photo.id}
+                style={{
+                  position: 'relative',
+                  aspectRatio: '1',
+                  borderRadius: 12,
+                  overflow: 'hidden',
+                }}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={photo.src}
+                  alt=""
+                  style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                />
+                <div style={{
+                  position: 'absolute', bottom: 6, left: 6,
+                  width: 7, height: 7, borderRadius: '50%',
+                  background: catColor(categoryId),
+                  boxShadow: '0 0 0 1.5px rgba(0,0,0,0.35)',
+                }} />
+                {metricLabel && (
+                  <div style={{
+                    position: 'absolute', top: 6, left: 6,
+                    background: 'rgba(0,0,0,0.55)',
+                    backdropFilter: 'blur(8px)',
+                    WebkitBackdropFilter: 'blur(8px)',
+                    borderRadius: 20,
+                    padding: '2px 7px',
+                    fontSize: 10, fontWeight: 700, color: '#fff',
+                    letterSpacing: '-0.01em',
+                  }}>
+                    {metricLabel}
+                  </div>
+                )}
+              </div>
+            )
+          })}
           {Array.from({ length: Math.max(0, 3 - tiles.length) }).map((_, i) => (
             <div
               key={`empty-${i}`}

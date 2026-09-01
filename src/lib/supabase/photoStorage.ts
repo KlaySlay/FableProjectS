@@ -11,6 +11,7 @@ type PhotoRow = {
   storage_path: string
   public_url: string
   created_at: string
+  metric_value: number | null
 }
 
 function rowToPhoto(row: PhotoRow): Photo {
@@ -22,6 +23,7 @@ function rowToPhoto(row: PhotoRow): Photo {
     categoryId: row.category_id,
     publicUrl: row.public_url,
     createdAt: row.created_at,
+    metricValue: row.metric_value,
   }
 }
 
@@ -31,6 +33,7 @@ export async function uploadPhoto(params: {
   communityId: string
   date: string // YYYY-MM-DD
   categoryId: string
+  metricValue?: number | null
 }): Promise<Photo> {
   const supabase = getSupabase()
   const photoId = crypto.randomUUID()
@@ -53,6 +56,7 @@ export async function uploadPhoto(params: {
       category_id: params.categoryId,
       storage_path: storagePath,
       public_url: urlData.publicUrl,
+      metric_value: params.metricValue ?? null,
     })
     .select()
     .single()

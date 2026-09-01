@@ -15,6 +15,8 @@ export type Community = {
   categories: Category[]
 }
 
+export type MetricType = 'none' | 'distance_km' | 'duration_min'
+
 export type Category = {
   id: string
   communityId: string
@@ -23,6 +25,8 @@ export type Category = {
   emoji: string
   color: string
   sortOrder: number
+  metricType: MetricType
+  metricRequired: boolean
 }
 
 export type Photo = {
@@ -33,6 +37,7 @@ export type Photo = {
   categoryId: string
   publicUrl: string
   createdAt: string
+  metricValue: number | null
 }
 
 export type CalendarPhoto = {
@@ -41,6 +46,7 @@ export type CalendarPhoto = {
   userId: string
   src: string
   categoryColor: string
+  metricValue: number | null
 }
 
 export type XPLevel = {

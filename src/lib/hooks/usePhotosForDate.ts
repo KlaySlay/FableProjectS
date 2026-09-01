@@ -29,6 +29,7 @@ export function usePhotosForDate(date: string): {
         userId: p.userId,
         src: p.publicUrl,
         categoryColor: colorById.get(p.categoryId) ?? '#71717a',
+        metricValue: p.metricValue,
       })),
     )
     setLoading(false)
