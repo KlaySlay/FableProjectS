@@ -38,6 +38,81 @@ function shiftMonth(y: number, m: number, delta: number): { year: number; month:
   return { year: yy, month: mm }
 }
 
+// Deterministic string hash + PRNG, so "random" tile picks are stable per day
+// (same result on every render/session) rather than reshuffling on each visit.
+function hashString(str: string): number {
+  let h = 2166136261
+  for (let i = 0; i < str.length; i++) {
+    h ^= str.charCodeAt(i)
+    h = Math.imul(h, 16777619)
+  }
+  return h >>> 0
+}
+
+function mulberry32(seed: number) {
+  let a = seed
+  return function rng() {
+    a |= 0; a = (a + 0x6d2b79f5) | 0
+    let t = Math.imul(a ^ (a >>> 15), 1 | a)
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
+  }
+}
+
+function shuffled<T>(arr: T[], rng: () => number): T[] {
+  const out = arr.slice()
+  for (let i = out.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1))
+    ;[out[i], out[j]] = [out[j], out[i]]
+  }
+  return out
+}
+
+/**
+ * Picks up to `max` photos for a day's preview tiles: one per category first
+ * (round-robin), then loops again across categories with leftover photos
+ * until `max` is reached. Selection is randomized but seeded by `seedKey`
+ * (the day's date key) so it's stable across renders, not chronological.
+ */
+function pickPreviewTiles(
+  photos: CalendarPhoto[],
+  categories: Category[],
+  seedKey: string,
+  max = 3,
+): { photo: CalendarPhoto; categoryId: string }[] {
+  const rng = mulberry32(hashString(seedKey))
+
+  const byCat = new Map<string, CalendarPhoto[]>()
+  for (const cat of categories) {
+    const sorted = photos.filter(p => p.categoryId === cat.id).sort((a, b) => a.id.localeCompare(b.id))
+    byCat.set(cat.id, shuffled(sorted, rng))
+  }
+  // Photos whose category isn't in the known list (e.g. a deleted category)
+  const knownIds = new Set(categories.map(c => c.id))
+  const orphan = photos.filter(p => !knownIds.has(p.categoryId)).sort((a, b) => a.id.localeCompare(b.id))
+  if (orphan.length) byCat.set('__other__', shuffled(orphan, rng))
+
+  const order = shuffled(Array.from(byCat.keys()), rng)
+  const cursors = new Map(order.map(id => [id, 0]))
+  const picked: { photo: CalendarPhoto; categoryId: string }[] = []
+
+  let progressed = true
+  while (picked.length < max && progressed) {
+    progressed = false
+    for (const catId of order) {
+      if (picked.length >= max) break
+      const arr = byCat.get(catId)!
+      const idx = cursors.get(catId)!
+      if (idx < arr.length) {
+        picked.push({ photo: arr[idx], categoryId: catId })
+        cursors.set(catId, idx + 1)
+        progressed = true
+      }
+    }
+  }
+  return picked
+}
+
 // ── Scroll-snap pager hook ─────────────────────────────────────────────────────
 function usePager(onPrev: () => void, onNext: () => void, resetKey: unknown) {
   const ref = useRef<HTMLDivElement>(null)
@@ -267,6 +342,18 @@ function DayCard({
 
   const totalPhotos = photos.length
 
+  // Stable-random tile picks: try one photo per category first, then loop
+  // again across categories with leftovers until 3 tiles are filled.
+  const tiles = useMemo(
+    () => pickPreviewTiles(photos, categories, key, 3),
+    [photos, categories, key],
+  )
+
+  const catColor = (categoryId: string) => {
+    const ci = categories.findIndex(c => c.id === categoryId)
+    return CAT_COLORS[(ci === -1 ? categories.length : ci) % CAT_COLORS.length]
+  }
+
   return (
     <Link href={`/day/${key}`} style={{ textDecoration: 'none', display: 'block' }}>
       <div style={{ background: 'var(--surface)', borderRadius: 20, padding: 12 }}>
@@ -284,59 +371,55 @@ function DayCard({
 
         <div style={{
           display: 'grid',
-          gridTemplateColumns: `repeat(${categories.length}, 1fr)`,
+          gridTemplateColumns: `repeat(${tiles.length}, 1fr)`,
           gap: 8,
+          marginBottom: categories.length > 0 ? 10 : 0,
         }}>
-          {categories.map((cat, ci) => {
-            const catPhotos = photos.filter(p => p.categoryId === cat.id)
-            const photo = catPhotos[0] ?? null
-            const count = catPhotos.length
-
-            return (
-              <div
-                key={cat.id}
-                style={{
-                  position: 'relative',
-                  aspectRatio: '1',
-                  borderRadius: 12,
-                  overflow: 'hidden',
-                  background: photo ? 'transparent' : 'var(--surface-2)',
-                }}
-              >
-                {photo ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={photo.src}
-                    alt=""
-                    style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-                  />
-                ) : (
-                  <div style={{
-                    position: 'absolute', bottom: 8, left: '50%', transform: 'translateX(-50%)',
-                    width: 4, height: 4, borderRadius: '50%',
-                    background: CAT_COLORS[ci % CAT_COLORS.length],
-                    opacity: 0.3,
-                  }} />
-                )}
-
-                {count > 1 && (
-                  <div style={{
-                    position: 'absolute', top: 6, right: 6,
-                    background: 'rgba(0,0,0,0.55)',
-                    backdropFilter: 'blur(8px)',
-                    WebkitBackdropFilter: 'blur(8px)',
-                    borderRadius: 20,
-                    padding: '2px 7px',
-                    fontSize: 11, fontWeight: 700, color: '#fff',
-                    letterSpacing: '-0.01em',
-                  }}>
-                    ×{count}
-                  </div>
-                )}
-              </div>
-            )
-          })}
+          {tiles.map(({ photo, categoryId }) => (
+            <div
+              key={photo.id}
+              style={{
+                position: 'relative',
+                aspectRatio: '1',
+                borderRadius: 12,
+                overflow: 'hidden',
+              }}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={photo.src}
+                alt=""
+                style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+              />
+              <div style={{
+                position: 'absolute', bottom: 6, left: 6,
+                width: 7, height: 7, borderRadius: '50%',
+                background: catColor(categoryId),
+                boxShadow: '0 0 0 1.5px rgba(0,0,0,0.35)',
+              }} />
+            </div>
+          ))}
         </div>
+
+        {/* Category completion bar — filled per category submitted this day */}
+        {categories.length > 0 && (
+          <div style={{ display: 'flex', gap: 3 }}>
+            {categories.map(cat => {
+              const done = photos.some(p => p.categoryId === cat.id)
+              return (
+                <div
+                  key={cat.id}
+                  style={{
+                    flex: 1, height: 3, borderRadius: 2,
+                    background: catColor(cat.id),
+                    opacity: done ? 1 : 0.16,
+                    transition: 'opacity 0.3s',
+                  }}
+                />
+              )
+            })}
+          </div>
+        )}
       </div>
     </Link>
   )
